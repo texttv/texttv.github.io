@@ -1,0 +1,466 @@
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement === pageInput) return;
+  if (e.key === 'ArrowLeft' && currentPage > minPage) {
+    goToPage(currentPage - 1);
+    prevBtn.focus();
+  }
+  if (e.key === 'ArrowRight' && currentPage < maxPage) {
+    goToPage(currentPage + 1);
+    nextBtn.focus();
+  }
+  if (e.key === 'Tab') {
+    // Focus indicators are handled by CSS
+  }
+});
+// Keyboard navigation support
+document.addEventListener('keydown', (e) => {
+  if (document.activeElement === pageInput) return;
+  if (e.key === 'ArrowLeft' && currentPage > minPage) {
+    goToPage(currentPage - 1);
+    prevBtn.focus();
+  }
+  if (e.key === 'ArrowRight' && currentPage < maxPage) {
+    goToPage(currentPage + 1);
+    nextBtn.focus();
+  }
+  if (e.key === 'Tab') {
+    // Focus indicators are handled by CSS
+  }
+});
+// DR Text TV PWA main logic
+const skeleton = document.getElementById('skeleton');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const pageInput = document.getElementById('pageInput');
+const goBtn = document.getElementById('goBtn');
+const reloadBtn = document.getElementById('reloadBtn');
+const offlineIndicator = document.getElementById('offlineIndicator');
+
+let currentPage = 110;
+let maxPage = 899;
+let minPage = 100;
+let imageCache = new Map(); // LRU cache for offline
+let cacheOrder = [];
+const CACHE_LIMIT = 50;
+
+function getImageUrl(page) {
+  // DR Text TV image URL
+  return `https://www.dr.dk/cgi-bin/fttv1.exe/${page}`;
+}
+
+function showSkeleton() {
+  skeleton.style.display = 'block';
+}
+function hideSkeleton() {
+  skeleton.style.display = 'none';
+}
+
+function showOfflineIndicator(show) {
+  offlineIndicator.style.display = show ? 'block' : 'none';
+}
+
+function preloadImage(page) {
+  const url = getImageUrl(page);
+  const img = new window.Image();
+  img.src = url;
+}
+
+function cacheImage(page, blob) {
+  if (!imageCache.has(page)) {
+    if (cacheOrder.length >= CACHE_LIMIT) {
+      const oldest = cacheOrder.shift();
+      imageCache.delete(oldest);
+    }
+    cacheOrder.push(page);
+  }
+  imageCache.set(page, blob);
+}
+
+async function fetchImage(page) {
+  if (imageCache.has(page)) {
+    return imageCache.get(page);
+  }
+  try {
+    const res = await fetch(getImageUrl(page));
+    if (!res.ok) throw new Error('Network error');
+    const blob = await res.blob();
+    cacheImage(page, blob);
+    return blob;
+  } catch (e) {
+    showOfflineIndicator(true);
+    throw e;
+  }
+}
+
+function displayPage(page) {
+  showSkeleton();
+  let iframe = document.getElementById('drIframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'drIframe';
+    iframe.title = `DR Text TV page ${page}`;
+    // Render the iframe at the original layout size and visually scale it.
+    iframe.style.position = 'fixed';
+    iframe.style.border = 'none';
+    iframe.style.zIndex = '100';
+    // Original Text TV width/height (approx)
+    iframe.dataset.nativeWidth = '320';
+    iframe.dataset.nativeHeight = '480';
+    iframe.style.width = iframe.dataset.nativeWidth + 'px';
+    iframe.style.height = iframe.dataset.nativeHeight + 'px';
+    // Keep transform origin at top-left so we can compute offsets
+    iframe.style.transformOrigin = '0 0';
+  // Keep scripts allowed but avoid allow-same-origin to prevent sandbox escape
+  iframe.setAttribute('sandbox', 'allow-scripts');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.style.overflow = 'hidden';
+    imageContainer.style.overflow = 'hidden';
+    imageContainer.appendChild(iframe);
+
+    // Scale and center helper
+    const applyIframeScale = () => {
+      const nativeW = parseFloat(iframe.dataset.nativeWidth);
+      const nativeH = parseFloat(iframe.dataset.nativeHeight);
+      const scaleByHeight = window.innerHeight / nativeH;
+      const scaleByWidth = window.innerWidth / nativeW;
+      // Prefer filling vertically, but ensure full document is visible horizontally
+      let scale = scaleByHeight;
+      if (nativeW * scale > window.innerWidth) {
+        // If filling height would overflow width, scale down to fit width
+        scale = scaleByWidth;
+      }
+      iframe.style.transform = `scale(${scale})`;
+      // Center the scaled iframe within the viewport
+      const scaledW = nativeW * scale;
+      const scaledH = nativeH * scale;
+      const left = Math.max((window.innerWidth - scaledW) / 2, 0);
+      const top = Math.max((window.innerHeight - scaledH) / 2, 0);
+      iframe.style.left = `${left}px`;
+      iframe.style.top = `${top}px`;
+    };
+
+    // Recompute on resize
+    window.addEventListener('resize', applyIframeScale);
+    // expose for later calls
+    iframe._applyScale = applyIframeScale;
+  // Remove any legacy overlays or edge zones that might block pointer events
+  const oldOverlay = document.getElementById('swipeOverlay');
+  if (oldOverlay) oldOverlay.remove();
+  const leftZone = document.getElementById('edgeZoneLeft');
+  if (leftZone) leftZone.remove();
+  const rightZone = document.getElementById('edgeZoneRight');
+  if (rightZone) rightZone.remove();
+  // Attach gesture handlers to iframe when created
+  try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
+  }
+  iframe.src = `https://www.dr.dk/cgi-bin/fttx2.exe/${page}`;
+  iframe.onload = function() {
+    // apply scale now that content has rendered
+    if (iframe._applyScale) iframe._applyScale();
+  // ensure gesture handlers are attached after load
+  try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
+    hideSkeleton();
+    showOfflineIndicator(false);
+  };
+  iframe.onerror = function() {
+    hideSkeleton();
+    showOfflineIndicator(true);
+  };
+  pageInput.value = page;
+  currentPage = page;
+}
+
+// Fullscreen swipe overlay to capture horizontal swipes across the entire view
+function ensureFullSwipeOverlay() {
+  if (document.getElementById('swipeOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'swipeOverlay';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.zIndex = '150';
+  overlay.style.background = 'transparent';
+  // Prevent browser default gestures that might interfere
+  overlay.style.touchAction = 'none';
+  document.body.appendChild(overlay);
+
+  // Ensure interactive controls sit above the overlay
+  if (prevBtn) prevBtn.style.zIndex = '300';
+  if (nextBtn) nextBtn.style.zIndex = '300';
+  const pageSelectorEl = document.getElementById('pageSelector');
+  if (pageSelectorEl) pageSelectorEl.style.zIndex = '300';
+  const offlineEl = document.getElementById('offlineIndicator');
+  if (offlineEl) offlineEl.style.zIndex = '301';
+
+  let startX = null;
+  overlay.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 1) startX = e.touches[0].clientX;
+  }, { passive: true });
+
+  overlay.addEventListener('touchend', (e) => {
+    if (startX === null) return;
+    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
+    if (endX === null) { startX = null; return; }
+    const dx = endX - startX;
+    if (Math.abs(dx) > 40) {
+      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
+      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
+    }
+    startX = null;
+  }, { passive: true });
+
+  // Mouse support for desktop testing
+  let mDownX = null;
+  overlay.addEventListener('mousedown', (e) => { mDownX = e.clientX; });
+  overlay.addEventListener('mouseup', (e) => {
+    if (mDownX === null) return;
+    const dx = e.clientX - mDownX;
+    if (Math.abs(dx) > 40) {
+      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
+      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
+    }
+    mDownX = null;
+  });
+}
+
+// Gesture handling: attach pointer-based swipe detection to the iframe
+function setupGestureHandlersForIframe(iframeEl) {
+  if (!iframeEl) return;
+  // If browser supports pointer events, bind to iframe element
+  if (window.PointerEvent) {
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    let handled = false;
+    const onDown = (e) => {
+      tracking = true;
+      handled = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      try { iframeEl.setPointerCapture(e.pointerId); } catch (err) {}
+    };
+    const onMove = (e) => {
+      if (!tracking) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (handled) return;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        handled = true;
+        if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
+        else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
+      }
+    };
+    const onUp = (e) => {
+      tracking = false;
+      try { iframeEl.releasePointerCapture(e.pointerId); } catch (err) {}
+    };
+    iframeEl.addEventListener('pointerdown', onDown, { passive: true });
+    iframeEl.addEventListener('pointermove', onMove, { passive: true });
+    iframeEl.addEventListener('pointerup', onUp, { passive: true });
+    iframeEl.addEventListener('pointercancel', onUp, { passive: true });
+  } else {
+    // Fallback: attach edge swipe zones if pointer events not supported
+    ensureEdgeSwipeZones();
+  }
+  // Also add touch event fallback for browsers that may not fire pointer events on iframes
+  let tStartX = null;
+  iframeEl.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 1) tStartX = e.touches[0].clientX;
+  }, { passive: true });
+  iframeEl.addEventListener('touchend', (e) => {
+    if (tStartX === null) return;
+    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
+    if (endX === null) { tStartX = null; return; }
+    const dx = endX - tStartX;
+    console.log('iframe touch dx', dx);
+    if (Math.abs(dx) > 40) {
+      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
+      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
+    }
+    tStartX = null;
+  }, { passive: true });
+}
+
+// Fallback edge zones (kept minimal) used only if pointer events missing
+function ensureEdgeSwipeZones() {
+  if (document.getElementById('edgeZoneLeft')) return;
+  const makeZone = (side) => {
+    const z = document.createElement('div');
+    z.id = side === 'left' ? 'edgeZoneLeft' : 'edgeZoneRight';
+    z.style.position = 'fixed';
+    z.style.top = '0';
+    z.style.height = '100vh';
+    z.style.width = '18%';
+    z.style[side] = '0';
+    z.style.zIndex = '200';
+    z.style.background = 'transparent';
+    z.style.touchAction = 'none';
+    document.body.appendChild(z);
+    return z;
+  };
+  const left = makeZone('left');
+  const right = makeZone('right');
+  const bindZone = (el, dir) => {
+    let startX = null;
+    el.addEventListener('touchstart', (e) => { if (e.touches.length === 1) startX = e.touches[0].clientX; }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+      if (startX === null) return; const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null; if (endX === null) { startX = null; return; }
+      const dx = endX - startX; if (Math.abs(dx) > 40) { if (dir === 'left' && dx > 0 && currentPage > minPage) goToPage(currentPage - 1); else if (dir === 'right' && dx < 0 && currentPage < maxPage) goToPage(currentPage + 1); } startX = null;
+    }, { passive: true });
+  };
+  bindZone(left, 'left'); bindZone(right, 'right');
+}
+
+function goToPage(page) {
+  if (page < minPage || page > maxPage) return;
+  displayPage(page);
+}
+
+prevBtn.addEventListener('click', () => {
+  if (currentPage > minPage) goToPage(currentPage - 1);
+});
+nextBtn.addEventListener('click', () => {
+  if (currentPage < maxPage) goToPage(currentPage + 1);
+});
+goBtn.addEventListener('click', () => {
+  const page = parseInt(pageInput.value, 10);
+  if (!isNaN(page)) goToPage(page);
+});
+reloadBtn.addEventListener('click', () => {
+  displayPage(currentPage);
+});
+pageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    goBtn.click();
+  }
+});
+
+// Touch gesture support
+let touchStartX = null;
+let touchEndX = null;
+imageContainer.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX;
+  }
+}, { passive: true });
+imageContainer.addEventListener('touchend', (e) => {
+  if (touchStartX !== null) {
+    touchEndX = e.changedTouches[0].clientX;
+    const dx = touchEndX - touchStartX;
+    if (dx > 50 && currentPage > minPage) {
+      goToPage(currentPage - 1);
+    } else if (dx < -50 && currentPage < maxPage) {
+      goToPage(currentPage + 1);
+    }
+    touchStartX = null;
+    touchEndX = null;
+  }
+}, { passive: true });
+
+// Pinch-to-zoom and double-tap zoom (basic)
+let lastTap = 0;
+imageContainer.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (e.touches.length === 0 && now - lastTap < 300) {
+    // Double tap
+    const img = document.getElementById('drImage');
+    if (img) {
+      if (img.style.transform === 'scale(2)') {
+        img.style.transform = 'scale(1)';
+      } else {
+        img.style.transform = 'scale(2)';
+      }
+      img.style.transition = 'transform 0.2s';
+    }
+  }
+  lastTap = now;
+}, { passive: true });
+
+// Offline detection
+window.addEventListener('online', () => showOfflineIndicator(false));
+window.addEventListener('offline', () => showOfflineIndicator(true));
+
+// Initial load
+displayPage(currentPage);
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // Listen for updates
+      if (reg.waiting) {
+        reg.waiting.postMessage('skipWaiting');
+      }
+      reg.onupdatefound = () => {
+        const newWorker = reg.installing;
+
+  // Global pointer swipe detector (capture phase) — detects swipes even when touching the iframe
+  (function installGlobalSwipeCapture() {
+    if (window._globalSwipeInstalled) return;
+    window._globalSwipeInstalled = true;
+    let tracking = false;
+    let startX = 0;
+    let startY = 0;
+    let pointerId = null;
+    let handled = false;
+
+    function onPointerDown(e) {
+      // Only track primary pointers to avoid multi-touch confusion
+      if (!e.isPrimary) return;
+    tracking = true;
+      handled = false;
+      pointerId = e.pointerId || null;
+      startX = e.clientX;
+      startY = e.clientY;
+    console.debug('swipe: pointerdown', { x: startX, y: startY, pointerId });
+    }
+
+    function onPointerMove(e) {
+      if (!tracking || handled) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        handled = true;
+        if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
+        else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
+    console.debug('swipe: triggered', { dx, dy });
+      }
+    }
+
+    function onPointerUp(e) {
+      if (!e.isPrimary) return;
+      tracking = false;
+      pointerId = null;
+      handled = false;
+    console.debug('swipe: pointerup');
+    }
+
+    if (window.PointerEvent) {
+      window.addEventListener('pointerdown', onPointerDown, true);
+      window.addEventListener('pointermove', onPointerMove, true);
+      window.addEventListener('pointerup', onPointerUp, true);
+      window.addEventListener('pointercancel', onPointerUp, true);
+    } else {
+      // Fallback for older browsers: use touch events at window level (may not fire for iframe)
+      window.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+          tracking = true; handled = false; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        }
+      }, true);
+      window.addEventListener('touchmove', (e) => {
+        if (!tracking || handled) return; const dx = e.touches[0].clientX - startX; const dy = e.touches[0].clientY - startY; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { handled = true; if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1); else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1); }
+      }, true);
+      window.addEventListener('touchend', (e) => { tracking = false; handled = false; }, true);
+    }
+  })();
+        newWorker.onstatechange = () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            newWorker.postMessage('skipWaiting');
+          }
+        };
+      };
+    });
+  });
+}
