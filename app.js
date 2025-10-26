@@ -55,9 +55,7 @@ function hideSkeleton() {
   skeleton.style.display = 'none';
 }
 
-function showOfflineIndicator(show) {
-  offlineIndicator.style.display = show ? 'block' : 'none';
-}
+// Offline indicator removed for minimal PWA
 
 function preloadImage(page) {
   const url = getImageUrl(page);
@@ -80,16 +78,11 @@ async function fetchImage(page) {
   if (imageCache.has(page)) {
     return imageCache.get(page);
   }
-  try {
-    const res = await fetch(getImageUrl(page));
-    if (!res.ok) throw new Error('Network error');
-    const blob = await res.blob();
-    cacheImage(page, blob);
-    return blob;
-  } catch (e) {
-    showOfflineIndicator(true);
-    throw e;
-  }
+  const res = await fetch(getImageUrl(page));
+  if (!res.ok) throw new Error('Network error');
+  const blob = await res.blob();
+  cacheImage(page, blob);
+  return blob;
 }
 
 function displayPage(page) {
@@ -157,14 +150,12 @@ function displayPage(page) {
   iframe.onload = function() {
     // apply scale now that content has rendered
     if (iframe._applyScale) iframe._applyScale();
-  // ensure gesture handlers are attached after load
-  try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
+    // ensure gesture handlers are attached after load
+    try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
     hideSkeleton();
-    showOfflineIndicator(false);
   };
   iframe.onerror = function() {
     hideSkeleton();
-    showOfflineIndicator(true);
   };
   pageInput.value = page;
   currentPage = page;
@@ -378,89 +369,9 @@ imageContainer.addEventListener('touchend', (e) => {
   lastTap = now;
 }, { passive: true });
 
-// Offline detection
-window.addEventListener('online', () => showOfflineIndicator(false));
-window.addEventListener('offline', () => showOfflineIndicator(true));
+// Offline detection removed
 
 // Initial load
 displayPage(currentPage);
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      // Listen for updates
-      if (reg.waiting) {
-        reg.waiting.postMessage('skipWaiting');
-      }
-      reg.onupdatefound = () => {
-        const newWorker = reg.installing;
-
-  // Global pointer swipe detector (capture phase) — detects swipes even when touching the iframe
-  (function installGlobalSwipeCapture() {
-    if (window._globalSwipeInstalled) return;
-    window._globalSwipeInstalled = true;
-    let tracking = false;
-    let startX = 0;
-    let startY = 0;
-    let pointerId = null;
-    let handled = false;
-
-    function onPointerDown(e) {
-      // Only track primary pointers to avoid multi-touch confusion
-      if (!e.isPrimary) return;
-    tracking = true;
-      handled = false;
-      pointerId = e.pointerId || null;
-      startX = e.clientX;
-      startY = e.clientY;
-    console.debug('swipe: pointerdown', { x: startX, y: startY, pointerId });
-    }
-
-    function onPointerMove(e) {
-      if (!tracking || handled) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        handled = true;
-        if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-        else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    console.debug('swipe: triggered', { dx, dy });
-      }
-    }
-
-    function onPointerUp(e) {
-      if (!e.isPrimary) return;
-      tracking = false;
-      pointerId = null;
-      handled = false;
-    console.debug('swipe: pointerup');
-    }
-
-    if (window.PointerEvent) {
-      window.addEventListener('pointerdown', onPointerDown, true);
-      window.addEventListener('pointermove', onPointerMove, true);
-      window.addEventListener('pointerup', onPointerUp, true);
-      window.addEventListener('pointercancel', onPointerUp, true);
-    } else {
-      // Fallback for older browsers: use touch events at window level (may not fire for iframe)
-      window.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches.length === 1) {
-          tracking = true; handled = false; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-        }
-      }, true);
-      window.addEventListener('touchmove', (e) => {
-        if (!tracking || handled) return; const dx = e.touches[0].clientX - startX; const dy = e.touches[0].clientY - startY; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { handled = true; if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1); else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1); }
-      }, true);
-      window.addEventListener('touchend', (e) => { tracking = false; handled = false; }, true);
-    }
-  })();
-        newWorker.onstatechange = () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            newWorker.postMessage('skipWaiting');
-          }
-        };
-      };
-    });
-  });
-}
+// Service worker and global offline swipe detection removed for minimal PWA
