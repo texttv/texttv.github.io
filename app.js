@@ -39,12 +39,12 @@ const offlineIndicator = document.getElementById('offlineIndicator');
 let currentPage = 110;
 let maxPage = 899;
 let minPage = 100;
-let imageCache = new Map(); // LRU cache for offline
+let contentCache = new Map(); // LRU cache for offline
 let cacheOrder = [];
 const CACHE_LIMIT = 50;
 
-function getImageUrl(page) {
-  // DR Text TV image URL
+function getContentUrl(page) {
+  // DR Text TV HTML content URL
   return `https://www.dr.dk/cgi-bin/fttv1.exe/${page}`;
 }
 
@@ -57,31 +57,31 @@ function hideSkeleton() {
 
 // Offline indicator removed for minimal PWA
 
-function preloadImage(page) {
-  const url = getImageUrl(page);
-  const img = new window.Image();
+function preloadContent(page) {
+  const url = getContentUrl(page);
+  // No image object needed for HTML content
   img.src = url;
 }
 
-function cacheImage(page, blob) {
-  if (!imageCache.has(page)) {
+function cacheContent(page, blob) {
+  if (!contentCache.has(page)) {
     if (cacheOrder.length >= CACHE_LIMIT) {
       const oldest = cacheOrder.shift();
-      imageCache.delete(oldest);
+  contentCache.delete(oldest);
     }
     cacheOrder.push(page);
   }
-  imageCache.set(page, blob);
+  contentCache.set(page, blob);
 }
 
-async function fetchImage(page) {
-  if (imageCache.has(page)) {
-    return imageCache.get(page);
+async function fetchContent(page) {
+  if (contentCache.has(page)) {
+  return contentCache.get(page);
   }
-  const res = await fetch(getImageUrl(page));
+  const res = await fetch(getContentUrl(page));
   if (!res.ok) throw new Error('Network error');
   const blob = await res.blob();
-  cacheImage(page, blob);
+  cacheContent(page, blob);
   return blob;
 }
 
@@ -107,8 +107,8 @@ function displayPage(page) {
   iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.setAttribute('scrolling', 'no');
     iframe.style.overflow = 'hidden';
-    imageContainer.style.overflow = 'hidden';
-    imageContainer.appendChild(iframe);
+    contentContainer.style.overflow = 'hidden';
+    contentContainer.appendChild(iframe);
 
     // Scale and center helper
     const applyIframeScale = () => {
@@ -331,12 +331,12 @@ pageInput.addEventListener('keydown', (e) => {
 // Touch gesture support
 let touchStartX = null;
 let touchEndX = null;
-imageContainer.addEventListener('touchstart', (e) => {
+contentContainer.addEventListener('touchstart', (e) => {
   if (e.touches.length === 1) {
     touchStartX = e.touches[0].clientX;
   }
 }, { passive: true });
-imageContainer.addEventListener('touchend', (e) => {
+contentContainer.addEventListener('touchend', (e) => {
   if (touchStartX !== null) {
     touchEndX = e.changedTouches[0].clientX;
     const dx = touchEndX - touchStartX;
@@ -352,11 +352,11 @@ imageContainer.addEventListener('touchend', (e) => {
 
 // Pinch-to-zoom and double-tap zoom (basic)
 let lastTap = 0;
-imageContainer.addEventListener('touchend', (e) => {
+contentContainer.addEventListener('touchend', (e) => {
   const now = Date.now();
   if (e.touches.length === 0 && now - lastTap < 300) {
     // Double tap
-    const img = document.getElementById('drImage');
+  // No image element for HTML content
     if (img) {
       if (img.style.transform === 'scale(2)') {
         img.style.transform = 'scale(1)';
