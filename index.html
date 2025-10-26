@@ -19,11 +19,11 @@
       margin: 0;
       padding: 0;
       font-family: system-ui, sans-serif;
-      background: #000;
-      color: #fff;
+      background: #eee;
+      color: #222;
       touch-action: pan-x pan-y;
       overscroll-behavior: contain;
-  overflow: hidden; /* prevent viewport scrollbars */
+      overflow: hidden; /* prevent viewport scrollbars */
     }
     #app {
       display: flex;
@@ -33,12 +33,11 @@
   overflow: hidden;
       position: relative;
     }
-    .image-container {
+    .content-container {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000;
       position: relative;
   overflow: hidden; /* ensure iframe is clipped */
     }
@@ -82,20 +81,8 @@
       align-items: center;
       gap: 8px;
     }
-    .skeleton {
-      width: 320px;
-      height: 240px;
-      background: linear-gradient(90deg, #222 25%, #333 50%, #222 75%);
-      border-radius: 8px;
-      animation: skeleton 1.2s infinite linear;
-    }
-    @keyframes skeleton {
-      0% { background-position: -320px 0; }
-      100% { background-position: 320px 0; }
-    }
-    @media (prefers-color-scheme: dark) {
-      body { background: #000; color: #fff; }
-    }
+  /* No skeleton animation, just plain loading text */
+  /* Remove dark mode override for body */
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; animation: none !important; }
     }
@@ -103,19 +90,26 @@
 </head>
 <body>
   <div id="app" role="main">
-    <div class="image-container" id="imageContainer" aria-live="polite">
-      <div class="skeleton" id="skeleton"></div>
+    <div class="content-container" id="contentContainer" aria-live="polite">
+      <div id="spinner" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:200;pointer-events:none;">
+        <div style="width:48px;height:48px;border:6px solid #ccc;border-top:6px solid #222;border-radius:50%;animation:spin 1s linear infinite;background:rgba(255,255,255,0.2);"></div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
     </div>
     <div class="nav-arrows">
-  <button class="arrow" id="prevBtn" aria-label="Previous page" tabindex="0" role="button">&#8592;</button>
-  <button class="arrow" id="nextBtn" aria-label="Next page" tabindex="0" role="button">&#8594;</button>
+      <button class="arrow" id="prevBtn" aria-label="Previous page" tabindex="0" role="button">&#8592;</button>
+      <button class="arrow" id="nextBtn" aria-label="Next page" tabindex="0" role="button">&#8594;</button>
     </div>
     <div class="page-selector" id="pageSelector">
-  <input type="number" id="pageInput" min="100" max="899" aria-label="Page number" style="width: 64px; font-size: 1.2rem;" role="spinbutton">
-  <button id="goBtn" aria-label="Go to page" role="button">Go</button>
-  <button id="reloadBtn" aria-label="Reload page" role="button">Reload</button>
+      <input type="number" id="pageInput" min="100" max="899" aria-label="Page number" style="width: 64px; font-size: 1.2rem;" role="spinbutton">
+      <button id="goBtn" aria-label="Go to page" role="button">Go</button>
+      <button id="reloadBtn" aria-label="Reload page" role="button">Reload</button>
     </div>
-  <div id="offlineIndicator" role="status" aria-live="assertive" style="display:none;position:absolute;top:0;left:0;width:100%;background:#c00;color:#fff;text-align:center;padding:4px;font-size:1rem;z-index:10;">Offline</div>
   </div>
   <script type="module" src="app.js" defer></script>
 </body>

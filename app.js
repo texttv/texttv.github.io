@@ -1,99 +1,46 @@
-document.addEventListener('keydown', (e) => {
-  if (document.activeElement === pageInput) return;
-  if (e.key === 'ArrowLeft' && currentPage > minPage) {
-    goToPage(currentPage - 1);
-    prevBtn.focus();
-  }
-  if (e.key === 'ArrowRight' && currentPage < maxPage) {
-    goToPage(currentPage + 1);
-    nextBtn.focus();
-  }
-  if (e.key === 'Tab') {
-    // Focus indicators are handled by CSS
-  }
-});
 // Keyboard navigation support
 document.addEventListener('keydown', (e) => {
   if (document.activeElement === pageInput) return;
   if (e.key === 'ArrowLeft' && currentPage > minPage) {
     goToPage(currentPage - 1);
     prevBtn.focus();
-  }
-  if (e.key === 'ArrowRight' && currentPage < maxPage) {
+  } else if (e.key === 'ArrowRight' && currentPage < maxPage) {
     goToPage(currentPage + 1);
     nextBtn.focus();
   }
-  if (e.key === 'Tab') {
-    // Focus indicators are handled by CSS
-  }
 });
+
 // DR Text TV PWA main logic
-const skeleton = document.getElementById('skeleton');
+const contentContainer = document.getElementById('contentContainer');
+const spinner = document.getElementById('spinner');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const pageInput = document.getElementById('pageInput');
 const goBtn = document.getElementById('goBtn');
 const reloadBtn = document.getElementById('reloadBtn');
-const offlineIndicator = document.getElementById('offlineIndicator');
 
 let currentPage = 110;
 let maxPage = 899;
 let minPage = 100;
-let imageCache = new Map(); // LRU cache for offline
-let cacheOrder = [];
-const CACHE_LIMIT = 50;
 
-function getImageUrl(page) {
-  // DR Text TV image URL
-  return `https://www.dr.dk/cgi-bin/fttv1.exe/${page}`;
+function showSpinner() {
+  if (spinner) spinner.style.display = 'flex';
 }
-
-function showSkeleton() {
-  skeleton.style.display = 'block';
-}
-function hideSkeleton() {
-  skeleton.style.display = 'none';
+function hideSpinner() {
+  if (spinner) spinner.style.display = 'none';
 }
 
-function showOfflineIndicator(show) {
-  offlineIndicator.style.display = show ? 'block' : 'none';
-}
 
-function preloadImage(page) {
-  const url = getImageUrl(page);
-  const img = new window.Image();
-  img.src = url;
-}
 
-function cacheImage(page, blob) {
-  if (!imageCache.has(page)) {
-    if (cacheOrder.length >= CACHE_LIMIT) {
-      const oldest = cacheOrder.shift();
-      imageCache.delete(oldest);
-    }
-    cacheOrder.push(page);
-  }
-  imageCache.set(page, blob);
-}
 
-async function fetchImage(page) {
-  if (imageCache.has(page)) {
-    return imageCache.get(page);
-  }
-  try {
-    const res = await fetch(getImageUrl(page));
-    if (!res.ok) throw new Error('Network error');
-    const blob = await res.blob();
-    cacheImage(page, blob);
-    return blob;
-  } catch (e) {
-    showOfflineIndicator(true);
-    throw e;
-  }
-}
+
+
+
+
+
 
 function displayPage(page) {
-  showSkeleton();
+  showSpinner();
   let iframe = document.getElementById('drIframe');
   if (!iframe) {
     iframe = document.createElement('iframe');
@@ -114,8 +61,8 @@ function displayPage(page) {
   iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.setAttribute('scrolling', 'no');
     iframe.style.overflow = 'hidden';
-    imageContainer.style.overflow = 'hidden';
-    imageContainer.appendChild(iframe);
+    contentContainer.style.overflow = 'hidden';
+    contentContainer.appendChild(iframe);
 
     // Scale and center helper
     const applyIframeScale = () => {
@@ -157,72 +104,15 @@ function displayPage(page) {
   iframe.onload = function() {
     // apply scale now that content has rendered
     if (iframe._applyScale) iframe._applyScale();
-  // ensure gesture handlers are attached after load
-  try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
-    hideSkeleton();
-    showOfflineIndicator(false);
+    // ensure gesture handlers are attached after load
+    try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
+    hideSpinner();
   };
   iframe.onerror = function() {
-    hideSkeleton();
-    showOfflineIndicator(true);
+    hideSpinner();
   };
   pageInput.value = page;
   currentPage = page;
-}
-
-// Fullscreen swipe overlay to capture horizontal swipes across the entire view
-function ensureFullSwipeOverlay() {
-  if (document.getElementById('swipeOverlay')) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'swipeOverlay';
-  overlay.style.position = 'fixed';
-  overlay.style.top = '0';
-  overlay.style.left = '0';
-  overlay.style.width = '100%';
-  overlay.style.height = '100%';
-  overlay.style.zIndex = '150';
-  overlay.style.background = 'transparent';
-  // Prevent browser default gestures that might interfere
-  overlay.style.touchAction = 'none';
-  document.body.appendChild(overlay);
-
-  // Ensure interactive controls sit above the overlay
-  if (prevBtn) prevBtn.style.zIndex = '300';
-  if (nextBtn) nextBtn.style.zIndex = '300';
-  const pageSelectorEl = document.getElementById('pageSelector');
-  if (pageSelectorEl) pageSelectorEl.style.zIndex = '300';
-  const offlineEl = document.getElementById('offlineIndicator');
-  if (offlineEl) offlineEl.style.zIndex = '301';
-
-  let startX = null;
-  overlay.addEventListener('touchstart', (e) => {
-    if (e.touches && e.touches.length === 1) startX = e.touches[0].clientX;
-  }, { passive: true });
-
-  overlay.addEventListener('touchend', (e) => {
-    if (startX === null) return;
-    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
-    if (endX === null) { startX = null; return; }
-    const dx = endX - startX;
-    if (Math.abs(dx) > 40) {
-      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    }
-    startX = null;
-  }, { passive: true });
-
-  // Mouse support for desktop testing
-  let mDownX = null;
-  overlay.addEventListener('mousedown', (e) => { mDownX = e.clientX; });
-  overlay.addEventListener('mouseup', (e) => {
-    if (mDownX === null) return;
-    const dx = e.clientX - mDownX;
-    if (Math.abs(dx) > 40) {
-      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    }
-    mDownX = null;
-  });
 }
 
 // Gesture handling: attach pointer-based swipe detection to the iframe
@@ -274,7 +164,6 @@ function setupGestureHandlersForIframe(iframeEl) {
     const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
     if (endX === null) { tStartX = null; return; }
     const dx = endX - tStartX;
-    console.log('iframe touch dx', dx);
     if (Math.abs(dx) > 40) {
       if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
       else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
@@ -340,12 +229,12 @@ pageInput.addEventListener('keydown', (e) => {
 // Touch gesture support
 let touchStartX = null;
 let touchEndX = null;
-imageContainer.addEventListener('touchstart', (e) => {
+contentContainer.addEventListener('touchstart', (e) => {
   if (e.touches.length === 1) {
     touchStartX = e.touches[0].clientX;
   }
 }, { passive: true });
-imageContainer.addEventListener('touchend', (e) => {
+contentContainer.addEventListener('touchend', (e) => {
   if (touchStartX !== null) {
     touchEndX = e.changedTouches[0].clientX;
     const dx = touchEndX - touchStartX;
@@ -359,108 +248,5 @@ imageContainer.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-// Pinch-to-zoom and double-tap zoom (basic)
-let lastTap = 0;
-imageContainer.addEventListener('touchend', (e) => {
-  const now = Date.now();
-  if (e.touches.length === 0 && now - lastTap < 300) {
-    // Double tap
-    const img = document.getElementById('drImage');
-    if (img) {
-      if (img.style.transform === 'scale(2)') {
-        img.style.transform = 'scale(1)';
-      } else {
-        img.style.transform = 'scale(2)';
-      }
-      img.style.transition = 'transform 0.2s';
-    }
-  }
-  lastTap = now;
-}, { passive: true });
-
-// Offline detection
-window.addEventListener('online', () => showOfflineIndicator(false));
-window.addEventListener('offline', () => showOfflineIndicator(true));
-
 // Initial load
 displayPage(currentPage);
-
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      // Listen for updates
-      if (reg.waiting) {
-        reg.waiting.postMessage('skipWaiting');
-      }
-      reg.onupdatefound = () => {
-        const newWorker = reg.installing;
-
-  // Global pointer swipe detector (capture phase) — detects swipes even when touching the iframe
-  (function installGlobalSwipeCapture() {
-    if (window._globalSwipeInstalled) return;
-    window._globalSwipeInstalled = true;
-    let tracking = false;
-    let startX = 0;
-    let startY = 0;
-    let pointerId = null;
-    let handled = false;
-
-    function onPointerDown(e) {
-      // Only track primary pointers to avoid multi-touch confusion
-      if (!e.isPrimary) return;
-    tracking = true;
-      handled = false;
-      pointerId = e.pointerId || null;
-      startX = e.clientX;
-      startY = e.clientY;
-    console.debug('swipe: pointerdown', { x: startX, y: startY, pointerId });
-    }
-
-    function onPointerMove(e) {
-      if (!tracking || handled) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        handled = true;
-        if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-        else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    console.debug('swipe: triggered', { dx, dy });
-      }
-    }
-
-    function onPointerUp(e) {
-      if (!e.isPrimary) return;
-      tracking = false;
-      pointerId = null;
-      handled = false;
-    console.debug('swipe: pointerup');
-    }
-
-    if (window.PointerEvent) {
-      window.addEventListener('pointerdown', onPointerDown, true);
-      window.addEventListener('pointermove', onPointerMove, true);
-      window.addEventListener('pointerup', onPointerUp, true);
-      window.addEventListener('pointercancel', onPointerUp, true);
-    } else {
-      // Fallback for older browsers: use touch events at window level (may not fire for iframe)
-      window.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches.length === 1) {
-          tracking = true; handled = false; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-        }
-      }, true);
-      window.addEventListener('touchmove', (e) => {
-        if (!tracking || handled) return; const dx = e.touches[0].clientX - startX; const dy = e.touches[0].clientY - startY; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { handled = true; if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1); else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1); }
-      }, true);
-      window.addEventListener('touchend', (e) => { tracking = false; handled = false; }, true);
-    }
-  })();
-        newWorker.onstatechange = () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            newWorker.postMessage('skipWaiting');
-          }
-        };
-      };
-    });
-  });
-}
