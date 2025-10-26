@@ -34,7 +34,6 @@ const nextBtn = document.getElementById('nextBtn');
 const pageInput = document.getElementById('pageInput');
 const goBtn = document.getElementById('goBtn');
 const reloadBtn = document.getElementById('reloadBtn');
-const offlineIndicator = document.getElementById('offlineIndicator');
 
 let currentPage = 110;
 let maxPage = 899;
@@ -54,8 +53,6 @@ function showSkeleton() {
 function hideSkeleton() {
   skeleton.style.display = 'none';
 }
-
-// Offline indicator removed for minimal PWA
 
 function preloadContent(page) {
   const url = getContentUrl(page);
@@ -182,9 +179,7 @@ function ensureFullSwipeOverlay() {
   if (nextBtn) nextBtn.style.zIndex = '300';
   const pageSelectorEl = document.getElementById('pageSelector');
   if (pageSelectorEl) pageSelectorEl.style.zIndex = '300';
-  const offlineEl = document.getElementById('offlineIndicator');
-  if (offlineEl) offlineEl.style.zIndex = '301';
-
+  
   let startX = null;
   overlay.addEventListener('touchstart', (e) => {
     if (e.touches && e.touches.length === 1) startX = e.touches[0].clientX;
@@ -369,9 +364,5 @@ contentContainer.addEventListener('touchend', (e) => {
   lastTap = now;
 }, { passive: true });
 
-// Offline detection removed
-
 // Initial load
 displayPage(currentPage);
-
-// Service worker and global offline swipe detection removed for minimal PWA
