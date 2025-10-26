@@ -56,34 +56,25 @@
       src="https://www.dr.dk/cgi-bin/fttx2.exe/110"
       title="DR Text TV"
       scrolling="no"
-      data-native-width="320"
-      data-native-height="500.5"
+      width="320"
+      height="500.5"
     ></iframe>
   </div>
   <script>
     const iframe = document.getElementById('drIframe');
     const wrapper = document.getElementById('iframeWrapper');
+    const nativeW = parseFloat(iframe.getAttribute('width'));
+    const nativeH = parseFloat(iframe.getAttribute('height'));
+    iframe.style.width = nativeW + 'px';
+    iframe.style.height = nativeH + 'px';
     const applyIframeScale = () => {
-      const nativeW = parseFloat(iframe.dataset.nativeWidth);
-      const nativeH = parseFloat(iframe.dataset.nativeHeight);
       const scaleByHeight = window.innerHeight / nativeH;
       const scaleByWidth = window.innerWidth / nativeW;
       let scale = scaleByHeight;
       if (nativeW * scale > window.innerWidth) {
         scale = scaleByWidth;
       }
-      iframe.style.width = nativeW + 'px';
-      iframe.style.height = nativeH + 'px';
       iframe.style.transform = `scale(${scale})`;
-
-      // console.log('scale', scale);
-      // console.log('window.innerWidth', window.innerWidth);
-      // console.log('window.innerHeight', window.innerHeight);
-      // console.log('nativeW', nativeW);
-      // console.log('nativeH', nativeH);
-      // console.log('left', left);
-      // console.log('top', top);
-
     };
     window.addEventListener('resize', applyIframeScale);
     iframe.onload = applyIframeScale;
