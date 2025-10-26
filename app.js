@@ -49,7 +49,7 @@ function getImageUrl(page) {
 }
 
 function showSkeleton() {
-  skeleton.style.display = 'block';
+  skeleton.style.display = 'flex';
 }
 function hideSkeleton() {
   skeleton.style.display = 'none';
