@@ -29,15 +29,24 @@
       position: relative;
       overflow: hidden;
     }
-    iframe {
+    #iframeWrapper {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+    iframe {
       border: none;
       background: blue;
       display: block;
+      position: static;
+      /* width/height set by JS */
+      transform-origin: center center;
     }
   </style>
 </head>
@@ -52,7 +61,6 @@
     ></iframe>
   </div>
   <script>
-    // Scale and center helper - use zoom instead of transform
     const iframe = document.getElementById('drIframe');
     const wrapper = document.getElementById('iframeWrapper');
     const applyIframeScale = () => {
@@ -64,25 +72,17 @@
       if (nativeW * scale > window.innerWidth) {
         scale = scaleByWidth;
       }
-      const scaledW = nativeW * scale;
-      const scaledH = nativeH * scale;
-      const left = Math.max((window.innerWidth - nativeW) / 2, 0);
-      const top = Math.max((window.innerHeight - nativeH) / 2, 0);
-
       iframe.style.width = nativeW + 'px';
       iframe.style.height = nativeH + 'px';
-      //iframe.style.left = `${left}px`;
-      iframe.style.zoom = scale;
-      // iframe.style.top = `${top}px`;
-      console.log('scale', scale);
-      console.log('window.innerWidth', window.innerWidth);
-      console.log('window.innerHeight', window.innerHeight);
-      console.log('nativeW', nativeW);
-      console.log('nativeH', nativeH);
-      console.log('scaledW', scaledW);
-      console.log('scaledH', scaledH);
-      console.log('left', left);
-      console.log('top', top);
+      iframe.style.transform = `scale(${scale})`;
+
+      // console.log('scale', scale);
+      // console.log('window.innerWidth', window.innerWidth);
+      // console.log('window.innerHeight', window.innerHeight);
+      // console.log('nativeW', nativeW);
+      // console.log('nativeH', nativeH);
+      // console.log('left', left);
+      // console.log('top', top);
 
     };
     window.addEventListener('resize', applyIframeScale);
