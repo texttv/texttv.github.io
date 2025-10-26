@@ -24,7 +24,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 // DR Text TV PWA main logic
-const skeleton = document.getElementById('skeleton');
+const spinner = document.getElementById('spinner');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const pageInput = document.getElementById('pageInput');
@@ -35,11 +35,11 @@ let currentPage = 110;
 let maxPage = 899;
 let minPage = 100;
 
-function showSkeleton() {
-  if (skeleton) skeleton.style.display = 'flex';
+function showSpinner() {
+  if (spinner) spinner.style.display = 'flex';
 }
-function hideSkeleton() {
-  if (skeleton) skeleton.style.display = 'none';
+function hideSpinner() {
+  if (spinner) spinner.style.display = 'none';
 }
 
 
@@ -52,7 +52,7 @@ function hideSkeleton() {
 
 
 function displayPage(page) {
-  showSkeleton();
+  showSpinner();
   let iframe = document.getElementById('drIframe');
   if (!iframe) {
     iframe = document.createElement('iframe');
@@ -118,10 +118,10 @@ function displayPage(page) {
     if (iframe._applyScale) iframe._applyScale();
     // ensure gesture handlers are attached after load
     try { setupGestureHandlersForIframe(iframe); } catch (err) { /* ignore */ }
-    hideSkeleton();
+    hideSpinner();
   };
   iframe.onerror = function() {
-    hideSkeleton();
+    hideSpinner();
   };
   pageInput.value = page;
   currentPage = page;
