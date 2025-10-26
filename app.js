@@ -18,13 +18,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' && currentPage > minPage) {
     goToPage(currentPage - 1);
     prevBtn.focus();
-  }
-  if (e.key === 'ArrowRight' && currentPage < maxPage) {
+  } else if (e.key === 'ArrowRight' && currentPage < maxPage) {
     goToPage(currentPage + 1);
     nextBtn.focus();
-  }
-  if (e.key === 'Tab') {
-    // Focus indicators are handled by CSS
   }
 });
 // DR Text TV PWA main logic
@@ -38,49 +34,22 @@ const reloadBtn = document.getElementById('reloadBtn');
 let currentPage = 110;
 let maxPage = 899;
 let minPage = 100;
-let contentCache = new Map(); // LRU cache for offline
-let cacheOrder = [];
-const CACHE_LIMIT = 50;
-
-function getContentUrl(page) {
-  // DR Text TV HTML content URL
-  return `https://www.dr.dk/cgi-bin/fttv1.exe/${page}`;
-}
 
 function showSkeleton() {
-  skeleton.style.display = 'flex';
+  if (skeleton) skeleton.style.display = 'flex';
 }
 function hideSkeleton() {
-  skeleton.style.display = 'none';
+  if (skeleton) skeleton.style.display = 'none';
 }
 
-function preloadContent(page) {
-  const url = getContentUrl(page);
-  // No image object needed for HTML content
-  img.src = url;
-}
 
-function cacheContent(page, blob) {
-  if (!contentCache.has(page)) {
-    if (cacheOrder.length >= CACHE_LIMIT) {
-      const oldest = cacheOrder.shift();
-  contentCache.delete(oldest);
-    }
-    cacheOrder.push(page);
-  }
-  contentCache.set(page, blob);
-}
 
-async function fetchContent(page) {
-  if (contentCache.has(page)) {
-  return contentCache.get(page);
-  }
-  const res = await fetch(getContentUrl(page));
-  if (!res.ok) throw new Error('Network error');
-  const blob = await res.blob();
-  cacheContent(page, blob);
-  return blob;
-}
+
+
+
+
+
+
 
 function displayPage(page) {
   showSkeleton();
@@ -343,25 +312,6 @@ contentContainer.addEventListener('touchend', (e) => {
     touchStartX = null;
     touchEndX = null;
   }
-}, { passive: true });
-
-// Pinch-to-zoom and double-tap zoom (basic)
-let lastTap = 0;
-contentContainer.addEventListener('touchend', (e) => {
-  const now = Date.now();
-  if (e.touches.length === 0 && now - lastTap < 300) {
-    // Double tap
-  // No image element for HTML content
-    if (img) {
-      if (img.style.transform === 'scale(2)') {
-        img.style.transform = 'scale(1)';
-      } else {
-        img.style.transform = 'scale(2)';
-      }
-      img.style.transition = 'transform 0.2s';
-    }
-  }
-  lastTap = now;
 }, { passive: true });
 
 // Initial load
