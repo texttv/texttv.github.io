@@ -1,17 +1,3 @@
-document.addEventListener('keydown', (e) => {
-  if (document.activeElement === pageInput) return;
-  if (e.key === 'ArrowLeft' && currentPage > minPage) {
-    goToPage(currentPage - 1);
-    prevBtn.focus();
-  }
-  if (e.key === 'ArrowRight' && currentPage < maxPage) {
-    goToPage(currentPage + 1);
-    nextBtn.focus();
-  }
-  if (e.key === 'Tab') {
-    // Focus indicators are handled by CSS
-  }
-});
 // Keyboard navigation support
 document.addEventListener('keydown', (e) => {
   if (document.activeElement === pageInput) return;
@@ -23,7 +9,9 @@ document.addEventListener('keydown', (e) => {
     nextBtn.focus();
   }
 });
+
 // DR Text TV PWA main logic
+const contentContainer = document.getElementById('contentContainer');
 const spinner = document.getElementById('spinner');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
@@ -127,59 +115,6 @@ function displayPage(page) {
   currentPage = page;
 }
 
-// Fullscreen swipe overlay to capture horizontal swipes across the entire view
-function ensureFullSwipeOverlay() {
-  if (document.getElementById('swipeOverlay')) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'swipeOverlay';
-  overlay.style.position = 'fixed';
-  overlay.style.top = '0';
-  overlay.style.left = '0';
-  overlay.style.width = '100%';
-  overlay.style.height = '100%';
-  overlay.style.zIndex = '150';
-  overlay.style.background = 'transparent';
-  // Prevent browser default gestures that might interfere
-  overlay.style.touchAction = 'none';
-  document.body.appendChild(overlay);
-
-  // Ensure interactive controls sit above the overlay
-  if (prevBtn) prevBtn.style.zIndex = '300';
-  if (nextBtn) nextBtn.style.zIndex = '300';
-  const pageSelectorEl = document.getElementById('pageSelector');
-  if (pageSelectorEl) pageSelectorEl.style.zIndex = '300';
-  
-  let startX = null;
-  overlay.addEventListener('touchstart', (e) => {
-    if (e.touches && e.touches.length === 1) startX = e.touches[0].clientX;
-  }, { passive: true });
-
-  overlay.addEventListener('touchend', (e) => {
-    if (startX === null) return;
-    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
-    if (endX === null) { startX = null; return; }
-    const dx = endX - startX;
-    if (Math.abs(dx) > 40) {
-      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    }
-    startX = null;
-  }, { passive: true });
-
-  // Mouse support for desktop testing
-  let mDownX = null;
-  overlay.addEventListener('mousedown', (e) => { mDownX = e.clientX; });
-  overlay.addEventListener('mouseup', (e) => {
-    if (mDownX === null) return;
-    const dx = e.clientX - mDownX;
-    if (Math.abs(dx) > 40) {
-      if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
-      else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
-    }
-    mDownX = null;
-  });
-}
-
 // Gesture handling: attach pointer-based swipe detection to the iframe
 function setupGestureHandlersForIframe(iframeEl) {
   if (!iframeEl) return;
@@ -229,7 +164,6 @@ function setupGestureHandlersForIframe(iframeEl) {
     const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
     if (endX === null) { tStartX = null; return; }
     const dx = endX - tStartX;
-    console.log('iframe touch dx', dx);
     if (Math.abs(dx) > 40) {
       if (dx > 0 && currentPage > minPage) goToPage(currentPage - 1);
       else if (dx < 0 && currentPage < maxPage) goToPage(currentPage + 1);
