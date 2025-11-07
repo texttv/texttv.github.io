@@ -41,34 +41,7 @@
       position: relative;
   overflow: hidden; /* ensure iframe is clipped */
     }
-    .nav-arrows {
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      pointer-events: none;
-    }
-    .arrow {
-      pointer-events: auto;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      font-size: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 8px;
-      cursor: pointer;
-      outline: none;
-    }
-    .arrow:focus {
-      box-shadow: 0 0 0 2px #fff;
-    }
+    
     .page-selector {
       position: absolute;
       bottom: 16px;
@@ -101,10 +74,7 @@
         }
       </style>
     </div>
-    <div class="nav-arrows">
-      <button class="arrow" id="prevBtn" aria-label="Previous page" tabindex="0" role="button">&#8592;</button>
-      <button class="arrow" id="nextBtn" aria-label="Next page" tabindex="0" role="button">&#8594;</button>
-    </div>
+    
     <div class="page-selector" id="pageSelector">
       <input type="number" id="pageInput" min="100" max="899" aria-label="Page number" style="width: 64px; font-size: 1.2rem;" role="spinbutton">
       <button id="goBtn" aria-label="Go to page" role="button">Go</button>

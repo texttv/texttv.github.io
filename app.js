@@ -3,18 +3,14 @@ document.addEventListener('keydown', (e) => {
   if (document.activeElement === pageInput) return;
   if (e.key === 'ArrowLeft' && currentPage > minPage) {
     goToPage(currentPage - 1);
-    prevBtn.focus();
   } else if (e.key === 'ArrowRight' && currentPage < maxPage) {
     goToPage(currentPage + 1);
-    nextBtn.focus();
   }
 });
 
 // DR Text TV PWA main logic
 const contentContainer = document.getElementById('contentContainer');
 const spinner = document.getElementById('spinner');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
 const pageInput = document.getElementById('pageInput');
 const goBtn = document.getElementById('goBtn');
 const reloadBtn = document.getElementById('reloadBtn');
@@ -207,12 +203,7 @@ function goToPage(page) {
   displayPage(page);
 }
 
-prevBtn.addEventListener('click', () => {
-  if (currentPage > minPage) goToPage(currentPage - 1);
-});
-nextBtn.addEventListener('click', () => {
-  if (currentPage < maxPage) goToPage(currentPage + 1);
-});
+ 
 goBtn.addEventListener('click', () => {
   const page = parseInt(pageInput.value, 10);
   if (!isNaN(page)) goToPage(page);
