@@ -60,11 +60,19 @@
       justify-content: center;
       background: rgba(48,16,16,0.7);
       z-index: 9999;
+      overflow: hidden; /* hide visual overflow when we scale the inner content */
     }
+    /* make inner a contained element we can center + scale */
     #topNav .nav-inner {
       display: flex;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
       gap: 0.6rem;
       padding: 0 0.5rem;
+      width: 100%;
+      box-sizing: border-box;
+      justify-content: center;
     }
     .nav-btn {
       display: flex;
@@ -72,8 +80,10 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      min-width: 3.6rem;
       padding: 0.4rem 0.4rem;
+      /* allow buttons to shrink when space is limited */
+      flex: 0 1 auto;
+      min-width: 0;
       color: #fff;
       background: rgba(0,0,0,0.6);
       border-radius: 0.4rem;
@@ -84,7 +94,15 @@
     }
     .nav-btn:active { transform: translateY(1px); }
     .nav-btn .page { font-weight: 700; font-size: 1.5rem; }
-    .nav-btn .label { font-size: 1rem; opacity: 0.95; }
+    .nav-btn .label { font-size: 0.7rem; opacity: 0.95; }
+    /* truncate label when space is limited */
+    .nav-btn .label {
+      display: block;
+      max-width: 6.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     /* push iframe wrapper down so nav doesn't overlap interactive area (visual scale still centers) */
     body.has-topnav #iframeWrapper { padding-top: 3.6rem; }
   </style>
