@@ -10,77 +10,153 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="preconnect" href="https://www.dr.dk">
+  <link rel="preconnect" href="https://www.dr.dk/cgi-bin/fttx2.exe/110">
   <title>DR Text TV</title>
   <style>
-    /* Critical CSS inline for fast FCP */
-    html, body {
-      height: 100%;
+    html {
       margin: 0;
       padding: 0;
-      font-family: system-ui, sans-serif;
-      background: #eee;
-      color: #222;
-      touch-action: pan-x pan-y;
-      overscroll-behavior: contain;
-      overflow: hidden; /* prevent viewport scrollbars */
+      width: 100%;
+      height: 100%;
     }
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      width: 100vw;
-  overflow: hidden;
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #311;
       position: relative;
+      overflow: hidden;
     }
-    .content-container {
-      flex: 1;
+    #iframeWrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-  overflow: hidden; /* ensure iframe is clipped */
+      background: transparent;
     }
-    
-    .page-selector {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      border-radius: 8px;
-      padding: 8px 16px;
+    iframe {
+      border: none;
+      background: transparent;
+      display: block;
+      position: static;
+      /* width/height set by JS */
+      transform-origin: center center;
+    }
+    /* Top floating nav */
+    #topNav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      /* height defined in relative rem units */
+      height: 4.6rem;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      background: rgba(48,16,16,0.7);
+      z-index: 9999;
     }
-  /* No skeleton animation, just plain loading text */
-  /* Remove dark mode override for body */
-    @media (prefers-reduced-motion: reduce) {
-      * { transition: none !important; animation: none !important; }
+    #topNav .nav-inner {
+      display: flex;
+      gap: 0.6rem;
+      padding: 0 0.5rem;
     }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-width: 3.6rem;
+      padding: 0.4rem 0.4rem;
+      color: #fff;
+      background: rgba(0,0,0,0.6);
+      border-radius: 0.4rem;
+      cursor: pointer;
+      user-select: none;
+      line-height: 1;
+      box-sizing: border-box;
+    }
+    .nav-btn:active { transform: translateY(1px); }
+    .nav-btn .page { font-weight: 700; font-size: 2.5rem; }
+    .nav-btn .label { font-size: 1rem; opacity: 0.95; }
+    /* push iframe wrapper down so nav doesn't overlap interactive area (visual scale still centers) */
+    body.has-topnav #iframeWrapper { padding-top: 3.6rem; }
   </style>
 </head>
 <body>
-  <div id="app" role="main">
-    <div class="content-container" id="contentContainer" aria-live="polite">
-      <div id="spinner" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:200;pointer-events:none;">
-        <div style="width:48px;height:48px;border:6px solid #ccc;border-top:6px solid #222;border-radius:50%;animation:spin 1s linear infinite;background:rgba(255,255,255,0.2);"></div>
-      </div>
-      <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      </style>
-    </div>
-    
-    <div class="page-selector" id="pageSelector">
-      <input type="number" id="pageInput" min="100" max="899" aria-label="Page number" style="width: 64px; font-size: 1.2rem;" role="spinbutton">
-      <button id="goBtn" aria-label="Go to page" role="button">Go</button>
-      <button id="reloadBtn" aria-label="Reload page" role="button">Reload</button>
-    </div>
+  <div id="iframeWrapper">    
+    <iframe id="drIframe"
+      src="https://www.dr.dk/cgi-bin/fttx2.exe/110"
+      title="DR Text TV"
+      scrolling="no"
+      width="320"
+      height="500.5"
+    ></iframe>
   </div>
-  <script type="module" src="app.js" defer></script>
+  <nav id="topNav" aria-label="Quick pages">
+    <div class="nav-inner">
+      <div class="nav-btn" data-page="100" role="button" tabindex="0" aria-label="100 Forside">
+        <span class="page">100</span>
+        <span class="label">Forside</span>
+      </div>
+      <div class="nav-btn" data-page="110" role="button" tabindex="0" aria-label="110 Nyheder">
+        <span class="page">110</span>
+        <span class="label">Nyheder</span>
+      </div>
+      <div class="nav-btn" data-page="200" role="button" tabindex="0" aria-label="200 Sport">
+        <span class="page">200</span>
+        <span class="label">Sport</span>
+      </div>
+      <div class="nav-btn" data-page="300" role="button" tabindex="0" aria-label="300 TV">
+        <span class="page">300</span>
+        <span class="label">TV</span>
+      </div>
+      <div class="nav-btn" data-page="400" role="button" tabindex="0" aria-label="400 Vejret">
+        <span class="page">400</span>
+        <span class="label">Vejret</span>
+      </div>
+      <div class="nav-btn" data-page="760" role="button" tabindex="0" aria-label="760 Reg. nyh.">
+        <span class="page">760</span>
+        <span class="label">Reg. nyh.</span>
+      </div>
+    </div>
+  </nav>
+  <script>
+    const iframe = document.getElementById('drIframe');
+    const wrapper = document.getElementById('iframeWrapper');
+    const nativeW = parseFloat(iframe.getAttribute('width'));
+    const nativeH = parseFloat(iframe.getAttribute('height'));
+    iframe.style.width = nativeW + 'px';
+    iframe.style.height = nativeH + 'px';
+    const applyIframeScale = () => {
+      const scaleByHeight = window.innerHeight / nativeH;
+      const scaleByWidth = window.innerWidth / nativeW;
+      let scale = scaleByHeight;
+      if (nativeW * scale > window.innerWidth) {
+        scale = scaleByWidth;
+      }
+      scale *= 0.99;
+      iframe.style.transform = `scale(${scale})`;
+    };
+    window.addEventListener('resize', applyIframeScale);
+    iframe.onload = applyIframeScale;
+    applyIframeScale();
+
+    // Wire nav buttons to change iframe src to the target page
+    function gotoPage(page) {
+      // pages are numbers like 110 -> URL pattern as used in iframe
+      iframe.src = `https://www.dr.dk/cgi-bin/fttx2.exe/${page}`;
+    }
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => gotoPage(btn.dataset.page));
+      btn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gotoPage(btn.dataset.page); } });
+    });
+  </script>
 </body>
 </html>
